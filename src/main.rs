@@ -127,3 +127,11 @@ fn main() {
     println!("message 2: {:?}", new_message);
     assert_eq!(message, new_message);
 }
+
+#[test]
+fn test_buffer_stuff() {
+    let message = Message::new("lmao idk what im doing".to_string(), "deweyhinni".to_string(), &[192_u8, 168_u8, 1_u8, 1_u8], &3333);
+    let message_buff = generate_message(message.clone());
+    let new_message = decypher_message(&message_buff);
+    assert_eq!(message, new_message);
+}
