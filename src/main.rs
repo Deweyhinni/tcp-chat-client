@@ -46,14 +46,15 @@ impl Message {
     }
 }
 
-// first 4 bytes are ip, next two are port next byte is the length of the username in bytes and
-// then the the username and then length of the message text in bytes is two bytes
-// bytes 0-3: ip
-// bytes 4-5: port
-// byte 6: username length
-// username, max 255 bytes
-// two bytes, text length
-// rest: text theoretical max 65535
+/// # Generates the `Vec<u8>` buffer to send through the websocket from a message struct instance
+/// first 4 bytes are ip, next two are port next byte is the length of the username in bytes and
+/// then the the username and then length of the message text in bytes is two bytes
+/// - bytes 0-3: ip
+/// - bytes 4-5: port
+/// - byte 6: username length
+/// - username, max 255 bytes
+/// - two bytes, text length
+/// - rest: text theoretical max 65535
 pub fn generate_message(message: Message) -> Vec<u8> {
     let mut message_buffer: Vec<u8> = Vec::new();
     message.ip.iter().for_each(|part| {
@@ -70,6 +71,7 @@ pub fn generate_message(message: Message) -> Vec<u8> {
     message_buffer
 }
 
+/// # Turns a `Vec<u8>` buffer into a message struct instance
 pub fn decypher_message(message: &Vec<u8>) -> Message {
     let mut message_out: Message = Message::new_empty();
     let mut temp_ip: [u8;4] = [0;4];
@@ -111,8 +113,9 @@ impl Client {
     }
 
     pub fn send_message(&mut self, message: &Vec<u8>) -> Result<(), Error> {
-        self.stream.write_all(message).expect("unable to write to stream");
-        self.stream.flush().expect("failed to flush stream");
+        self.stream.write_all(&message.len().to_be_bytes())?;
+        self.stream.write_all(message)?;
+        self.stream.flush()?;
         
         Ok(())
     }
