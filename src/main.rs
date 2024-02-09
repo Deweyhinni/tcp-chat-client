@@ -2,6 +2,7 @@
 use std::net::{TcpStream, SocketAddrV4, Ipv4Addr};
 // use std::collections::VecDeque;
 use std::io::{Error, Read, Write};
+use std::thread;
 // use std::sync::Mutex;
 // use std::sync::Arc;
 // use std::thread;
@@ -119,16 +120,35 @@ impl Client {
         
         Ok(())
     }
+
+    pub fn receive(&mut self) -> Result<(), Error> {
+        let mut stream_clone: TcpStream = self.stream.try_clone()?;
+        thread::spawn(move|| -> Result<(), Error> {
+            'read_loop: loop {
+                let mut len_bytes: [u8;8] = [0_u8;8];
+                stream_clone.read_exact(&mut len_bytes)?;
+                let msg_len: usize = u64::from_be_bytes(len_bytes) as usize;
+                let mut msg_buffer: Vec<u8> = vec![0_u8;msg_len];
+                stream_clone.read_exact(&mut msg_buffer)?;
+                let message: Message = decypher_message(&msg_buffer);
+                println!("{:?}", message);
+            }
+        });
+
+        Ok(())
+    }
 }
 
 fn main() {
-    println!("lmao");
-    let message = Message::new("lmao idk what im doing".to_string(), "deweyhinni".to_string(), &[192_u8, 168_u8, 1_u8, 1_u8], &3333);
-    let message_buff = generate_message(message.clone());
-    let new_message = decypher_message(&message_buff);
-    println!("message 1: {:?}", message);
-    println!("message 2: {:?}", new_message);
-    assert_eq!(message, new_message);
+    let mut client = Client::start(Ipv4Addr::new(192,168,1,1), 3333, 80).expect("failed to create client");
+    let message = Message::new("lmao idk what im doing".to_string(), "deweyhinni".to_string(), &[192_u8, 168_u8, 1_u8, 10_u8], &3333);
+    client.send_message(&generate_message(message.clone())).unwrap();
+    client.receive().unwrap();
+    // let message_buff = generate_message(message.clone());
+    // let new_message = decypher_message(&message_buff);
+    // println!("message 1: {:?}", message);
+    // println!("message 2: {:?}", new_message);
+    // assert_eq!(message, new_message);
 }
 
 #[test]
