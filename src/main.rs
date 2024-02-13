@@ -107,7 +107,7 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn start(address: Ipv4Addr, port: u16, buffer_capacity: usize) -> Result<Self, Error> {
+    pub fn start(address: Ipv4Addr, port: u16, _buffer_capacity: usize) -> Result<Self, Error> {
         Ok(Self {
             // message_buffer: { Arc::new(Mutex::new(VecDeque::with_capacity(buffer_capacity))) },
             stream: { TcpStream::connect(SocketAddrV4::new(address, port))? },
@@ -125,7 +125,7 @@ impl Client {
     pub fn receive(&mut self) -> Result<(), Error> {
         let mut stream_clone: TcpStream = self.stream.try_clone()?;
         thread::spawn(move|| -> Result<(), Error> {
-            'read_loop: loop {
+            loop {
                 let mut len_bytes: [u8;8] = [0_u8;8];
                 stream_clone.read_exact(&mut len_bytes)?;
                 let msg_len: usize = u64::from_be_bytes(len_bytes) as usize;
@@ -143,9 +143,6 @@ impl Client {
 fn main() {
     let mut client = Client::start(Ipv4Addr::new(192,168,1,1), 3333, 80).expect("failed to create client");
     client.receive().unwrap();
-    // let message = Message::new("lmao idk what im doing".to_string(), "deweyhinni".to_string(), &[192_u8, 168_u8, 1_u8, 159_u8], &3333);
-    // client.send_message(&generate_message(message.clone())).unwrap();
-    // client.send_message(&generate_message(message)).unwrap();
     print!("> ");
     io::stdout().flush().unwrap();
     for line in io::stdin().lines() {
