@@ -7,6 +7,7 @@ use std::thread;
 // use std::sync::Mutex;
 // use std::sync::Arc;
 // use std::thread;
+use clap::Parser;
 
 fn split_u16(short_u16: u16) -> [u8;2] {
     let high_byte: u8 = (short_u16 >> 8) as u8;
@@ -115,7 +116,8 @@ impl Client {
     }
 
     pub fn send_message(&mut self, message: &Vec<u8>) -> Result<(), Error> {
-        self.stream.write_all(&message.len().to_be_bytes())?;
+        let msg_len: u64 = message.len() as u64;
+        self.stream.write_all(&msg_len.to_be_bytes())?;
         self.stream.write_all(message)?;
         self.stream.flush()?;
         
@@ -140,15 +142,33 @@ impl Client {
     }
 }
 
+#[derive(Parser, Debug, Clone)]
+#[command(version, about, long_about = None)]
+struct Args {
+    #[arg(short, long)]
+    pub username: String,
+
+    #[arg(short, long)]
+    pub server: Ipv4Addr,
+
+    #[arg(short, long)]
+    pub client: Ipv4Addr,
+
+    #[arg(short, long, default_value_t = 3333)]
+    pub port: u16,
+}
+
 fn main() {
-    let mut client = Client::start(Ipv4Addr::new(192,168,1,1), 3333, 80).expect("failed to create client");
+    let args = Args::parse();
+
+    let mut client = Client::start(args.server, args.port, 80).expect("failed to create client");
     client.receive().unwrap();
     print!("> ");
     io::stdout().flush().unwrap();
     for line in io::stdin().lines() {
         print!("> ");
         io::stdout().flush().unwrap();
-        let new_msg = Message::new(line.expect("failed to get input"), "deweyhinni".to_string(), &[192,168,1,2], &3333);
+        let new_msg = Message::new(line.expect("failed to get input"), args.username.clone(), &args.client.octets(), &args.port);
         client.send_message(&generate_message(new_msg)).unwrap();
     }
 }
